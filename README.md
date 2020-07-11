@@ -94,4 +94,5 @@ https://forge.autodesk.com/ <br />
 https://around-the-corner.typepad.com <br />
 
 ### Thumbnail
-![thumbnail](thumbnail_default.png)
+
+![thumbnail](/thumbnail_default.png)
