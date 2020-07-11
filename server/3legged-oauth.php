@@ -34,8 +34,8 @@ use Autodesk\Auth\OAuth2\ThreeLeggedAuth;
 // reason, we will generate 2 tokens; the public token being very restrictive.
 
 // Showing 2 technics PHP Session and MySQL (choose one one, by uncommenting 1 or the 2 lines below)
-//define('TOKENS_STORAGE_3', 'PHPSession');
-define('TOKENS_STORAGE_3', 'MySQL');
+define('TOKENS_STORAGE_3', 'PHPSession');
+//define('TOKENS_STORAGE_3', 'MySQL');
 
 define('_3leggedPublic', '3leggedPublic');
 define('_3leggedInternal', '3leggedInternal');

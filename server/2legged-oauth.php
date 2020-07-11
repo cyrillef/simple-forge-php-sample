@@ -38,8 +38,8 @@ use Autodesk\Auth\OAuth2\TwoLeggedAuth;
 // reason, we will generate 2 tokens; the public token being very restrictive.
 
 // Showing 2 technics PHP Session and MySQL (choose one one, by uncommenting 1 or the 2 lines below)
-//define('TOKENS_STORAGE_2', 'PHPSession');
-define('TOKENS_STORAGE_2', 'MySQL');
+define('TOKENS_STORAGE_2', 'PHPSession');
+//define('TOKENS_STORAGE_2', 'MySQL');
 
 define('_2leggedPublic', '2leggedPublic');
 define('_2leggedInternal', '2leggedInternal');
