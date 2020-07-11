@@ -7,7 +7,7 @@
 [![OSS](https://img.shields.io/badge/OSS-v2-green.svg)](http://developer-autodesk.github.io/)
 [![Viewer](https://img.shields.io/badge/Forge%20Viewer-v7.3-green.svg)](http://developer-autodesk.github.io/)
 
-# SImple Forge Sample (supports 2 and 3 legged)
+# Simple Forge Sample (supports 2 and 3 legged)
 
 <b>Note:</b> For using this sample, you need a valid oAuth credential.
 Visit this [page](https://forge.autodesk.com) for instructions to get on-board.

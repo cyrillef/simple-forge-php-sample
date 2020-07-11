@@ -17,6 +17,7 @@
 //
 
 session_start();
+
 include_once './vendor/autoload.php';
 include_once './server/constants.php';
 include_once './server/config.php';
@@ -102,6 +103,15 @@ $klein->respond('GET', '/callback', function ($request, $response) {
 	$oauth = new AccessToken3Legged();
 	$oauth->fetchTokens($request->paramsGet()['code']);
 	return $response->redirect('/www/bim360.html');
+});
+
+//---------------------------- Test ----------------------------
+
+$klein->respond('GET', '/test', function () {
+	$t0 = time();
+	sleep(5);
+	$t1 = time();
+	return json_encode([ 'msg' => "$t0 -> $t1" ]);
 });
 
 $klein->dispatch();

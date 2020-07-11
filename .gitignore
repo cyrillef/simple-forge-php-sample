@@ -2,5 +2,6 @@ composer.phar
 server/.env
 
 vendor/
+node_modules/
 
 .vscode/

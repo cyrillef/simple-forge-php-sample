@@ -1,0 +1,33 @@
+{
+	"name": "z-php-sample-tests",
+	"version": "1.0.0",
+	"description": "",
+	"keywords": [
+		"Autodesk",
+		"Forge"
+	],
+	"homepage": "https://forge.autodesk.com/",
+	"author": "Cyrille Fauvel <cyrille@autodesk.com>",
+	"contributors": [
+		"Cyrille Fauvel <cyrille@autodesk.com>"
+	],
+	"license": "MIT",
+	"engines": {
+		"node": ">= 9.5.0",
+		"npm": ">= 6.0.0"
+	},
+	"cacheDirectories": [
+		"node_modules"
+	],
+	"main": "test.js",
+	"scripts": {},
+	"dependencies": {
+		"superagent": "^5.3.1"
+	},
+	"devDependencies": {
+		"eslint": "^7.0.0"
+	},
+	"prettier": {
+		"singleQuote": true
+	}
+}
