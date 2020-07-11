@@ -1,0 +1,32 @@
+{
+	"name": "autodesk/z-php-sample",
+	"description": "2legged, 3legged sample",
+	"keywords": [
+		"autodesk",
+		"forge",
+		"php"
+	],
+	"homepage": "https://forge.autodesk.com/",
+	"type": "project",
+	"license": "MIT",
+	"require": {
+		"php": ">=7.0.0",
+		"autodesk/forge-client": "^1.0",
+		"doctrine/dbal": "^2.5",
+		"klein/klein": "^2.1",
+		"vlucas/phpdotenv": "^4.1"
+	},
+	"require-dev": {
+	},
+	"config": {
+		"process-timeout": 1800,
+		"platform": {
+			"php": "7.0"
+		},
+		"vendor-dir": "vendor",
+		"sort-packages": true,
+		"fxp-asset": {
+			"enabled": false
+		}
+	}
+}

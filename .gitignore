@@ -1,0 +1,6 @@
+composer.phar
+server/.env
+
+vendor/
+
+.vscode/
