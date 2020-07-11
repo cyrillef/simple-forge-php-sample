@@ -109,7 +109,7 @@ $klein->respond('GET', '/callback', function ($request, $response) {
 
 $klein->respond('GET', '/test', function () {
 	$t0 = time();
-	sleep(5);
+	sleep(3);
 	$t1 = time();
 	return json_encode([ 'msg' => "$t0 -> $t1" ]);
 });

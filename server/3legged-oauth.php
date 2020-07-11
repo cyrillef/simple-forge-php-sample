@@ -137,7 +137,7 @@ class AuthClientThreeLegged {
 
 	public function getTokenPublicSession () {
 		if ( !isset($_SESSION[AccessToken3Public]) || $_SESSION[ExpiresTime3] < time() )
-			$this->refreshTokens();
+			$this->refreshTokens($_SESSION[RefreshToken]);
 		return [
 			'access_token' => $_SESSION[AccessToken3Public],
 			'expires_in' => $_SESSION[ExpiresTime3] - time(),
@@ -196,7 +196,7 @@ class AuthClientThreeLegged {
 
 	public function getTokenInternalSession () {
 		if ( !isset($_SESSION[AccessToken3Internal]) || $_SESSION[ExpiresTime3] < time() )
-			$this->refreshTokens();
+			$this->refreshTokens($_SESSION[RefreshToken]);
 		$this->threeLeggedAuth = new ThreeLeggedAuth();
 		$this->threeLeggedAuth->setScopes(ForgeConfig::getScopeInternal3());
 		$this->threeLeggedAuth->setAccessToken($_SESSION[AccessToken3Internal]);

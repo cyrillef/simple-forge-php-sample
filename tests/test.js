@@ -14,3 +14,24 @@
 // DOES NOT WARRANT THAT THE OPERATION OF THE PROGRAM WILL BE
 // UNINTERRUPTED OR ERROR FREE.
 //
+/*jshint esversion: 9 */
+
+const superagent = require('superagent');
+
+const test1 = async () => {
+	let jobs = [];
+	for (let i = 0; i < 5; i++) {
+		const job = superagent
+			.get(`http://zphp.local/test`)
+			.accept('application/json')
+			.send();
+		jobs.push (job);
+	}
+	let results = await Promise.all (jobs);
+	results = results.map(elt => {
+		return(JSON.parse(elt.text));
+	});
+	console.log(JSON.stringify(results));
+};
+
+test1();
