@@ -17,5 +17,6 @@
 //
 
 define('PHPSession', 'PHPSession');
+define('SemaphoreID', 2112);
 
 ?>

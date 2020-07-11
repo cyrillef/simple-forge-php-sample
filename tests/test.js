@@ -19,10 +19,12 @@
 const superagent = require('superagent');
 
 const test1 = async () => {
+	//const url = `http://zphp.local/test`;
+	const url = `http://zphp.local/api/forge/public/3legged`;
 	let jobs = [];
 	for (let i = 0; i < 5; i++) {
 		const job = superagent
-			.get(`http://zphp.local/test`)
+			.get(url)
 			.accept('application/json')
 			.send();
 		jobs.push (job);

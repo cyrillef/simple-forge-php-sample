@@ -34,8 +34,8 @@ use Autodesk\Auth\OAuth2\ThreeLeggedAuth;
 // reason, we will generate 2 tokens; the public token being very restrictive.
 
 // Showing 2 technics PHP Session and MySQL (choose one one, by uncommenting 1 or the 2 lines below)
-define('TOKENS_STORAGE_3', 'PHPSession');
-//define('TOKENS_STORAGE_3', 'MySQL');
+//define('TOKENS_STORAGE_3', 'PHPSession');
+define('TOKENS_STORAGE_3', 'MySQL');
 
 define('_3leggedPublic', '3leggedPublic');
 define('_3leggedInternal', '3leggedInternal');
@@ -50,7 +50,8 @@ define('RefreshToken', 'RefreshToken');
 // 	`token` Text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
 // 	`expirestime` BigInt( 20 ) NOT NULL,
 // 	`refresh` VarChar( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NULL,
-// 	`session` VarChar( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NULL )
+// 	`session` VarChar( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NULL,
+// 	CONSTRAINT `type` UNIQUE( `type` ) )
 // CHARACTER SET = utf8
 // COLLATE = utf8_general_ci
 // ENGINE = InnoDB;
@@ -60,8 +61,16 @@ class AuthClientThreeLegged {
 	private $threeLeggedAuth = null;
 	private $conn = null;
 
+	// We always have a pair (Public / Internal) tokens that we refresh at teh same time
+	// We always refresh the public token last, so we should only refresh from the Public refresh token.
+
 	public function __construct () {
 		set_time_limit(0);
+
+		$this->semaphore = sem_get(SemaphoreID, 1, 0666, 1);
+		// 1- The number of processes that can acquire this semaphore
+		// 1- Auto release the semaphore if the request shuts down
+	
 		Configuration::getDefaultConfiguration()
 			->setClientId(ForgeConfig::getForgeID())
 			->setClientSecret(ForgeConfig::getForgeSecret())
@@ -89,6 +98,7 @@ class AuthClientThreeLegged {
 
 	public function fetchTokens ($code) {
 		try {
+			sem_acquire($this->semaphore);
 			$this->threeLeggedAuth = new ThreeLeggedAuth();
 			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopeInternal3());
 			$this->threeLeggedAuth->fetchToken($code);
@@ -97,6 +107,7 @@ class AuthClientThreeLegged {
 			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopePublic());
 			$this->threeLeggedAuth->refreshToken($this->threeLeggedAuth->getRefreshToken());
 			$this->storeTokenPublic($this->threeLeggedAuth);
+			sem_release($this->semaphore);
 		} catch (Throwable $e) { // PHP 7 compatibility
             echo 'Exception when calling AuthClientThreeLegged->fetchTokens: ', $e->getMessage(), PHP_EOL;
         } catch (Exception $e) {
@@ -104,28 +115,65 @@ class AuthClientThreeLegged {
 		}
 	}
 
-	public function refreshTokens ($refreshToken) {
+	public function refreshTokens () {
 		try {
-			// Start with the public token, so we know we keep the internal refresh token
+			sem_acquire($this->semaphore);
+			$refreshToken = $this->getLastRefreshToken();
+			// Start with the internal token, so we know we keep the public refresh token
 			$this->threeLeggedAuth = new ThreeLeggedAuth();
-			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopePublic());
-			$this->threeLeggedAuth->refreshToken($refreshToken);
-			$this->storeTokenPublic($this->threeLeggedAuth);
-			// Immediatelly fetch a private token
 			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopeInternal3());
-			$this->threeLeggedAuth->refreshToken($this->threeLeggedAuth->getRefreshToken());
+			$this->threeLeggedAuth->refreshToken($refreshToken);
 			$this->storeTokenInternal($this->threeLeggedAuth);
+			// Immediatelly fetch a private token
+			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopePublic());
+			$this->threeLeggedAuth->refreshToken($this->threeLeggedAuth->getRefreshToken());
+			$this->storeTokenPublic($this->threeLeggedAuth);
+			sem_release($this->semaphore);
 		} catch (Throwable $e) { // PHP 7 compatibility
             echo 'Exception when calling AuthClientThreeLegged->fetchTokens: ', $e->getMessage(), PHP_EOL;
         } catch (Exception $e) {
 			echo 'Exception when calling AuthClientThreeLegged->fetchTokens: ', $e->getMessage(), PHP_EOL;
 		}
+	}
+
+	private function getLastRefreshToken () {
+		if ( TOKENS_STORAGE_3 === PHPSession )
+			return $_SESSION[RefreshToken];
+		$sql = "SELECT `refresh` FROM `tokens` WHERE `type` = ?";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->bindValue(1, _3leggedPublic);
+		$stmt->execute();
+		$all = $stmt->fetchAll();
+		return $all[0]['refresh'];
 	}
 
 	private function storeTokenPublic ($oauth) {
+		return ( TOKENS_STORAGE_3 === PHPSession ?
+			$this->storeTokenPublicSession ($oauth)
+			: $this->storeTokenPublicMysql ($oauth)
+		);
+	}
+
+	private function storeTokenPublicSession ($oauth) {
 		$_SESSION[AccessToken3Public] = $oauth->getAccessToken();
 		$_SESSION[ExpiresTime3] = time() + $oauth->getExpiresIn() - 120; // minus 2min
 		$_SESSION[RefreshToken] = $oauth->getRefreshToken();
+	}
+
+	public function storeTokenPublicMysql ($oauth) {
+		$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`, `refresh`) VALUES (?, ?, ?, ?)"
+			. " ON DUPLICATE KEY UPDATE `token` = ?, `expirestime` = ?, `refresh` = ?";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->bindValue(1, $oauth->getAccessToken());
+		$stmt->bindValue(2, time() + $oauth->getExpiresIn() - 120); // minus 2min
+		$stmt->bindValue(3, _3leggedPublic);
+		$stmt->bindValue(4, $oauth->getRefreshToken());
+
+		$stmt->bindValue(5, $oauth->getAccessToken());
+		$stmt->bindValue(6, time() + $oauth->getExpiresIn() - 120); // minus 2min
+		$stmt->bindValue(7, $oauth->getRefreshToken());
+		
+		$stmt->execute();
 	}
 
 	public function getTokenPublic () {
@@ -137,7 +185,7 @@ class AuthClientThreeLegged {
 
 	public function getTokenPublicSession () {
 		if ( !isset($_SESSION[AccessToken3Public]) || $_SESSION[ExpiresTime3] < time() )
-			$this->refreshTokens($_SESSION[RefreshToken]);
+			$this->refreshTokens();
 		return [
 			'access_token' => $_SESSION[AccessToken3Public],
 			'expires_in' => $_SESSION[ExpiresTime3] - time(),
@@ -145,46 +193,52 @@ class AuthClientThreeLegged {
 	}
 
 	public function getTokenPublicMysql () {
-		// $queryBuilder = $this->conn->createQueryBuilder();
-		// $queryBuilder
-		// 	->select('token', 'expirestime')
-		// 	->from('tokens')
-		// 	->where('type = ?')
-		// 	->setParameter(0, _3leggedPublic);
-
 		$sql = "SELECT `token`, `expirestime` FROM `tokens` WHERE `type` = ?";
 		$stmt = $this->conn->prepare($sql);
 		$stmt->bindValue(1, _3leggedPublic);
 		$stmt->execute();
 
 		$all = $stmt->fetchAll();
-		if ( count($all) === 0 || $all[0]['expirestime'] < time() ) {
-			$this->threeLeggedAuthPublic = new ThreeLeggedAuth();
-			$this->threeLeggedAuthPublic->setScopes(ForgeConfig::getScopePublic());
-			$this->threeLeggedAuthPublic->fetchToken();
-			$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`) VALUES (?, ?, ?)";
-			if ( count($all) > 0 )
-				$sql = "UPDATE `tokens` SET `token` = ?, `expirestime` = ? WHERE `type` = ?";
-			$stmt = $this->conn->prepare($sql);
-			$stmt->bindValue(1, $this->threeLeggedAuthPublic->getAccessToken());
-			$stmt->bindValue(2, time() + $this->threeLeggedAuthPublic->getExpiresIn() - 120); // minus 2min
-			$stmt->bindValue(3, _3leggedPublic);
+		if ( count($all) === 0 )
+			return [];
+		if ( $all[0]['expirestime'] < time() ) {
+			$this->refreshTokens();
 			$stmt->execute();
-			return [
-				'access_token' => $this->threeLeggedAuthPublic->getAccessToken(),
-				'expires_in' => $this->threeLeggedAuthPublic->getExpiresIn(),
-			];
+			$all = $stmt->fetchAll();
 		}
-		return array(
+		return [
 			'access_token' => $all[0]['token'],
 			'expires_in' => $all[0]['expirestime'] - time(),
-		);
+		];
 	}
 
 	private function storeTokenInternal ($oauth) {
+		return ( TOKENS_STORAGE_3 === PHPSession ?
+			$this->storeTokenInternalSession ($oauth)
+			: $this->storeTokenInternalMysql ($oauth)
+		);
+	}
+
+	private function storeTokenInternalSession ($oauth) {
 		$_SESSION[AccessToken3Internal] = $oauth->getAccessToken();
 		$_SESSION[ExpiresTime3] = time() + $oauth->getExpiresIn() - 120; // minus 2min
 		$_SESSION[RefreshToken] = $oauth->getRefreshToken();
+	}
+
+	public function storeTokenInternalMysql ($oauth) {
+		$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`, `refresh`) VALUES (?, ?, ?, ?)"
+			. " ON DUPLICATE KEY UPDATE `token` = ?, `expirestime` = ?, `refresh` = ?";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->bindValue(1, $oauth->getAccessToken());
+		$stmt->bindValue(2, time() + $oauth->getExpiresIn() - 120); // minus 2min
+		$stmt->bindValue(3, _3leggedInternal);
+		$stmt->bindValue(4, $oauth->getRefreshToken());
+
+		$stmt->bindValue(5, $oauth->getAccessToken());
+		$stmt->bindValue(6, time() + $oauth->getExpiresIn() - 120); // minus 2min
+		$stmt->bindValue(7, $oauth->getRefreshToken());
+		
+		$stmt->execute();
 	}
 
 	public function getTokenInternal () {
@@ -196,38 +250,31 @@ class AuthClientThreeLegged {
 
 	public function getTokenInternalSession () {
 		if ( !isset($_SESSION[AccessToken3Internal]) || $_SESSION[ExpiresTime3] < time() )
-			$this->refreshTokens($_SESSION[RefreshToken]);
+			$this->refreshTokens();
 		$this->threeLeggedAuth = new ThreeLeggedAuth();
 		$this->threeLeggedAuth->setScopes(ForgeConfig::getScopeInternal3());
 		$this->threeLeggedAuth->setAccessToken($_SESSION[AccessToken3Internal]);
-		return $this->threeLeggedAuth;  
+		return $this->threeLeggedAuth;
 	}
 
 	public function getTokenInternalMysql () {
-		$this->threeLeggedAuthInternal = new ThreeLeggedAuth();
-		$this->threeLeggedAuthInternal->setScopes(ForgeConfig::getScopeInternal3());
-
 		$sql = "SELECT `token`, `expirestime` FROM `tokens` WHERE `type` = ?";
 		$stmt = $this->conn->prepare($sql);
 		$stmt->bindValue(1, _3leggedInternal);
 		$stmt->execute();
 
 		$all = $stmt->fetchAll();
-		if ( count($all) === 0 || $all[0]['expirestime'] < time() ) {
-			$this->threeLeggedAuthInternal->fetchToken();
-			$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`) VALUES (?, ?, ?)";
-			if ( count($all) > 0 )
-				$sql = "UPDATE `tokens` SET `token` = ?, `expirestime` = ? WHERE `type` = ?";
-			$stmt = $this->conn->prepare($sql);
-			$stmt->bindValue(1, $this->threeLeggedAuthInternal->getAccessToken());
-			$stmt->bindValue(2, time() + $this->threeLeggedAuthInternal->getExpiresIn() - 120); // minus 2min
-			$stmt->bindValue(3, _3leggedInternal);
+		if ( count($all) === 0 )
+			return null;
+		if ( $all[0]['expirestime'] < time() ) {
+			$this->refreshTokens();
 			$stmt->execute();
-			$this->threeLeggedAuthInternal->setAccessToken($this->threeLeggedAuthInternal->getAccessToken());
-		} else {
-			$this->threeLeggedAuthInternal->setAccessToken($all[0]['token']);
+			$all = $stmt->fetchAll();
 		}
-		return $this->threeLeggedAuthInternal; 
+		$this->threeLeggedAuth = new ThreeLeggedAuth();
+		$this->threeLeggedAuth->setScopes(ForgeConfig::getScopeInternal3());
+		$this->threeLeggedAuth->setAccessToken($all[0]['token']);
+		return $this->threeLeggedAuth;
 	}
 
 }

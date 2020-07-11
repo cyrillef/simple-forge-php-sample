@@ -54,7 +54,8 @@ define('ExpiresTime2Internal', 'ExpiresTime2Internal');
 // 	`token` Text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
 // 	`expirestime` BigInt( 20 ) NOT NULL,
 // 	`refresh` VarChar( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NULL,
-// 	`session` VarChar( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NULL )
+// 	`session` VarChar( 255 ) CHARACTER SET utf8 COLLATE utf8_general_ci NULL,
+// 	CONSTRAINT `type` UNIQUE( `type` ) )
 // CHARACTER SET = utf8
 // COLLATE = utf8_general_ci
 // ENGINE = InnoDB;
@@ -138,10 +139,10 @@ class AuthClientTwoLegged {
 				'expires_in' => $this->twoLeggedAuthPublic->getExpiresIn(),
 			];
 		}
-		return array(
+		return [
 			'access_token' => $all[0]['token'],
 			'expires_in' => $all[0]['expirestime'] - time(),
-		);
+		];
 	}
 
 	public function getTokenInternal () {
