@@ -31,6 +31,8 @@ class BIM360 {
 		try {
 			$accessToken = $threeLeggedAuth->getTokenInternal();
 
+			if ( is_null($accessToken) )
+				return [];
 			$folderInstance = new FoldersApi($accessToken);
 			$itemInstance = new ItemsApi($accessToken);
 			
@@ -66,7 +68,7 @@ class BIM360 {
 			return $objectlist;
 		} catch(Exception $e) {
 			echo 'Exception when calling FolderApi->getFolderContents: ', $e->getMessage(), PHP_EOL;
-			return null;
+			return [];
 		}
 	}
 

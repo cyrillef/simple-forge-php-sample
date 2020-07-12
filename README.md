@@ -46,9 +46,9 @@ Demonstrates the use of the Autodesk Forge API using a PHP7 application. Support
 
       b. Edits /server/3legged-oauth.php at [#37 #38](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L37)
 
-      c. Create the mySQL table in your database - create statement [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L47)
+      c. Create the mySQL table in your database - create statement [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L52)
 
-      d. Edit your mySQL connection information [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L82) and [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/2legged-oauth.php#L79)
+      d. Edit your mySQL connection information [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L94) and [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/2legged-oauth.php#L79)
 
   9. You can choose you default model by changing the URNs - for 2 legged [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L52) and for 3 legged [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L80)
   10. For 3 legged, specify your BIM 360 HUB and PROJECT IDs [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L90)

@@ -34,8 +34,13 @@ use Autodesk\Auth\OAuth2\ThreeLeggedAuth;
 // reason, we will generate 2 tokens; the public token being very restrictive.
 
 // Showing 2 technics PHP Session and MySQL (choose one one, by uncommenting 1 or the 2 lines below)
-define('TOKENS_STORAGE_3', 'PHPSession');
-//define('TOKENS_STORAGE_3', 'MySQL');
+//define('TOKENS_STORAGE_3', 'PHPSession');
+define('TOKENS_STORAGE_3', 'MySQL');
+
+// It is really not recommended to do one single 3legged login. This is a security risk as you
+// you would not be able to track user activities since you share one set of credentials. It is 
+// however acceptable for viewing only. Defaults to false.
+define('SHARED_3LEGGED_TOKEN', false);
 
 define('_3leggedPublic', '3leggedPublic');
 define('_3leggedInternal', '3leggedInternal');
@@ -59,6 +64,8 @@ define('RefreshToken', 'RefreshToken');
 
 class AuthClientThreeLegged {
 	private $threeLeggedAuth = null;
+	private $publicKey = _3leggedPublic;
+	private $internalKey = _3leggedInternal;
 	private $conn = null;
 
 	// We always have a pair (Public / Internal) tokens that we refresh at teh same time
@@ -70,6 +77,11 @@ class AuthClientThreeLegged {
 		$this->semaphore = sem_get(SemaphoreID, 1, 0666, 1);
 		// 1- The number of processes that can acquire this semaphore
 		// 1- Auto release the semaphore if the request shuts down
+
+		if ( SHARED_3LEGGED_TOKEN === false ) {
+			$this->publicKey .= session_id();
+			$this->internalKey .= session_id();
+		}
 	
 		Configuration::getDefaultConfiguration()
 			->setClientId(ForgeConfig::getForgeID())
@@ -141,7 +153,7 @@ class AuthClientThreeLegged {
 			return $_SESSION[RefreshToken];
 		$sql = "SELECT `refresh` FROM `tokens` WHERE `type` = ?";
 		$stmt = $this->conn->prepare($sql);
-		$stmt->bindValue(1, _3leggedPublic);
+		$stmt->bindValue(1, $this->publicKey);
 		$stmt->execute();
 		$all = $stmt->fetchAll();
 		return $all[0]['refresh'];
@@ -161,17 +173,19 @@ class AuthClientThreeLegged {
 	}
 
 	public function storeTokenPublicMysql ($oauth) {
-		$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`, `refresh`) VALUES (?, ?, ?, ?)"
-			. " ON DUPLICATE KEY UPDATE `token` = ?, `expirestime` = ?, `refresh` = ?";
+		$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`, `refresh`, `session`) VALUES (?, ?, ?, ?, ?)"
+			. " ON DUPLICATE KEY UPDATE `token` = ?, `expirestime` = ?, `refresh` = ?, `session` = ?";
 		$stmt = $this->conn->prepare($sql);
 		$stmt->bindValue(1, $oauth->getAccessToken());
 		$stmt->bindValue(2, time() + $oauth->getExpiresIn() - 120); // minus 2min
-		$stmt->bindValue(3, _3leggedPublic);
+		$stmt->bindValue(3, $this->publicKey);
 		$stmt->bindValue(4, $oauth->getRefreshToken());
+		$stmt->bindValue(5, session_id());
 
-		$stmt->bindValue(5, $oauth->getAccessToken());
-		$stmt->bindValue(6, time() + $oauth->getExpiresIn() - 120); // minus 2min
-		$stmt->bindValue(7, $oauth->getRefreshToken());
+		$stmt->bindValue(6, $oauth->getAccessToken());
+		$stmt->bindValue(7, time() + $oauth->getExpiresIn() - 120); // minus 2min
+		$stmt->bindValue(8, $oauth->getRefreshToken());
+		$stmt->bindValue(9, session_id());
 		
 		$stmt->execute();
 	}
@@ -195,7 +209,7 @@ class AuthClientThreeLegged {
 	public function getTokenPublicMysql () {
 		$sql = "SELECT `token`, `expirestime` FROM `tokens` WHERE `type` = ?";
 		$stmt = $this->conn->prepare($sql);
-		$stmt->bindValue(1, _3leggedPublic);
+		$stmt->bindValue(1, $this->publicKey);
 		$stmt->execute();
 
 		$all = $stmt->fetchAll();
@@ -226,17 +240,19 @@ class AuthClientThreeLegged {
 	}
 
 	public function storeTokenInternalMysql ($oauth) {
-		$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`, `refresh`) VALUES (?, ?, ?, ?)"
-			. " ON DUPLICATE KEY UPDATE `token` = ?, `expirestime` = ?, `refresh` = ?";
+		$sql = "INSERT INTO `tokens` (`token`, `expirestime`, `type`, `refresh`, `session`) VALUES (?, ?, ?, ?, ?)"
+			. " ON DUPLICATE KEY UPDATE `token` = ?, `expirestime` = ?, `refresh` = ?, `session` = ?";
 		$stmt = $this->conn->prepare($sql);
 		$stmt->bindValue(1, $oauth->getAccessToken());
 		$stmt->bindValue(2, time() + $oauth->getExpiresIn() - 120); // minus 2min
-		$stmt->bindValue(3, _3leggedInternal);
+		$stmt->bindValue(3, $this->internalKey);
 		$stmt->bindValue(4, $oauth->getRefreshToken());
+		$stmt->bindValue(5, session_id());
 
-		$stmt->bindValue(5, $oauth->getAccessToken());
-		$stmt->bindValue(6, time() + $oauth->getExpiresIn() - 120); // minus 2min
-		$stmt->bindValue(7, $oauth->getRefreshToken());
+		$stmt->bindValue(6, $oauth->getAccessToken());
+		$stmt->bindValue(7, time() + $oauth->getExpiresIn() - 120); // minus 2min
+		$stmt->bindValue(8, $oauth->getRefreshToken());
+		$stmt->bindValue(9, session_id());
 		
 		$stmt->execute();
 	}
@@ -260,7 +276,7 @@ class AuthClientThreeLegged {
 	public function getTokenInternalMysql () {
 		$sql = "SELECT `token`, `expirestime` FROM `tokens` WHERE `type` = ?";
 		$stmt = $this->conn->prepare($sql);
-		$stmt->bindValue(1, _3leggedInternal);
+		$stmt->bindValue(1, $this->internalKey);
 		$stmt->execute();
 
 		$all = $stmt->fetchAll();
