@@ -20,29 +20,29 @@ namespace Autodesk\ForgeServices;
 
 class AccessToken3Legged {
 
-    public function __construct() {
-        set_time_limit(0);
-    }
-
-    public function authorizeUrl () {
-		global $threeLeggedAuth;
-        return $threeLeggedAuth->authorizeUrl();
-    }
-    
-    public function fetchTokens ($code) {
-		global $threeLeggedAuth;
-        $threeLeggedAuth->fetchTokens($code);
+	public function __construct() {
+		set_time_limit(0);
 	}
 
-    public function getAccessToken() {
-        global $threeLeggedAuth;
-        try {
-            $accessToken = $threeLeggedAuth->getTokenPublic();
-            print_r( json_encode($accessToken));
-        } catch (Exception $e) {
-            echo 'Exception when calling threeLeggedAuth->getTokenPublic: ', $e->getMessage(), PHP_EOL;
-        }
-    }
+	public function authorizeUrl () {
+		global $threeLeggedAuth;
+		return $threeLeggedAuth->authorizeUrl();
+	}
+	
+	public function fetchTokens ($code) {
+		global $threeLeggedAuth;
+		$threeLeggedAuth->fetchTokens($code);
+	}
+
+	public function getAccessToken() {
+		global $threeLeggedAuth;
+		try {
+			$accessToken = $threeLeggedAuth->getTokenPublic();
+			print_r( json_encode($accessToken));
+		} catch (Exception $e) {
+			echo 'Exception when calling threeLeggedAuth->getTokenPublic: ', $e->getMessage(), PHP_EOL;
+		}
+	}
 }
 
 ?>

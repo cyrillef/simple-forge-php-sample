@@ -20,20 +20,20 @@ namespace Autodesk\ForgeServices;
 
 class AccessToken2Legged {
 
-    public function __construct() {
-        set_time_limit(0);
-    }    
+	public function __construct() {
+		set_time_limit(0);
+	}    
 
-    public function getAccessToken() {
-        global $twoLeggedAuth;
-        try {
-            $accessToken = $twoLeggedAuth->getTokenPublic();
-            return json_encode($accessToken);
-        } catch (Exception $e) {
-            echo 'Exception when calling twoLeggedAuth->getTokenPublic: ', $e->getMessage(), PHP_EOL;
-            return null;
-        }
-    }
+	public function getAccessToken() {
+		global $twoLeggedAuth;
+		try {
+			$accessToken = $twoLeggedAuth->getTokenPublic();
+			return json_encode($accessToken);
+		} catch (Exception $e) {
+			echo 'Exception when calling twoLeggedAuth->getTokenPublic: ', $e->getMessage(), PHP_EOL;
+			return null;
+		}
+	}
 }
 
 ?>

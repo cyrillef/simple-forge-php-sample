@@ -40,7 +40,15 @@ define('TOKENS_STORAGE_3', 'MySQL');
 // It is really not recommended to do one single 3legged login. This is a security risk as you
 // you would not be able to track user activities since you share one set of credentials. It is 
 // however acceptable for viewing only. Defaults to false.
-define('SHARED_3LEGGED_TOKEN', false);
+define('SHARED_3LEGGED_TOKEN', false); // if false, each session needs to log a user
+
+// When using PHP Sessions, you do not really have the choice on controlling the refresh sequences
+// However, using semaphore only works on a single server, but when usually Apache/Nginx routes
+// HTTP requests from a client to teh same server. This semaphore approach will then work for
+// PHP session and mysql if when using mysql, you are not sharing the same tokens. DO not use the
+// combinatin USE_SEMAPHORE=true and SHARED_3LEGGED_TOKEN=true ever on balancing servers.
+// Defaults to false.
+define('USE_SEMAPHORE', false); // if false, it uses mysql locks
 
 define('_3leggedPublic', '3leggedPublic');
 define('_3leggedInternal', '3leggedInternal');
@@ -64,19 +72,21 @@ define('RefreshToken', 'RefreshToken');
 
 class AuthClientThreeLegged {
 	private $threeLeggedAuth = null;
+	private $semaphore = null;
 	private $publicKey = _3leggedPublic;
 	private $internalKey = _3leggedInternal;
 	private $conn = null;
 
 	// We always have a pair (Public / Internal) tokens that we refresh at teh same time
-	// We always refresh the public token last, so we should only refresh from the Public refresh token.
+	// We always refresh the public token last, so we should only use the Public refresh token.
 
 	public function __construct () {
 		set_time_limit(0);
 
-		$this->semaphore = sem_get(SemaphoreID, 1, 0666, 1);
-		// 1- The number of processes that can acquire this semaphore
-		// 1- Auto release the semaphore if the request shuts down
+		if ( USE_SEMAPHORE === true )
+			$this->semaphore = sem_get(SemaphoreID, 1, 0666, 1);
+			// 1- The number of processes that can acquire this semaphore
+			// 1- Auto release the semaphore if the request shuts down
 
 		if ( SHARED_3LEGGED_TOKEN === false ) {
 			$this->publicKey .= session_id();
@@ -110,7 +120,10 @@ class AuthClientThreeLegged {
 
 	public function fetchTokens ($code) {
 		try {
-			sem_acquire($this->semaphore);
+			if ( USE_SEMAPHORE === true )
+				sem_acquire($this->semaphore);
+			else
+				$this->lockTokensTable();
 			$this->threeLeggedAuth = new ThreeLeggedAuth();
 			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopeInternal3());
 			$this->threeLeggedAuth->fetchToken($code);
@@ -119,7 +132,10 @@ class AuthClientThreeLegged {
 			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopePublic());
 			$this->threeLeggedAuth->refreshToken($this->threeLeggedAuth->getRefreshToken());
 			$this->storeTokenPublic($this->threeLeggedAuth);
-			sem_release($this->semaphore);
+			if ( USE_SEMAPHORE === true )
+				sem_release($this->semaphore);
+			else
+				$this->unlockTokensTable();
 		} catch (Throwable $e) { // PHP 7 compatibility
             echo 'Exception when calling AuthClientThreeLegged->fetchTokens: ', $e->getMessage(), PHP_EOL;
         } catch (Exception $e) {
@@ -129,7 +145,10 @@ class AuthClientThreeLegged {
 
 	public function refreshTokens () {
 		try {
-			sem_acquire($this->semaphore);
+			if ( USE_SEMAPHORE === true )
+				sem_acquire($this->semaphore);
+			else
+				$this->lockTokensTable();
 			$refreshToken = $this->getLastRefreshToken();
 			// Start with the internal token, so we know we keep the public refresh token
 			$this->threeLeggedAuth = new ThreeLeggedAuth();
@@ -140,12 +159,25 @@ class AuthClientThreeLegged {
 			$this->threeLeggedAuth->setScopes(ForgeConfig::getScopePublic());
 			$this->threeLeggedAuth->refreshToken($this->threeLeggedAuth->getRefreshToken());
 			$this->storeTokenPublic($this->threeLeggedAuth);
-			sem_release($this->semaphore);
+			if ( USE_SEMAPHORE === true )
+				sem_release($this->semaphore);
+			else
+				$this->unlockTokensTable();
 		} catch (Throwable $e) { // PHP 7 compatibility
-            echo 'Exception when calling AuthClientThreeLegged->fetchTokens: ', $e->getMessage(), PHP_EOL;
+            echo 'Exception when calling AuthClientThreeLegged->refreshTokens: ', $e->getMessage(), PHP_EOL;
         } catch (Exception $e) {
-			echo 'Exception when calling AuthClientThreeLegged->fetchTokens: ', $e->getMessage(), PHP_EOL;
+			echo 'Exception when calling AuthClientThreeLegged->refreshTokens: ', $e->getMessage(), PHP_EOL;
 		}
+	}
+
+	private function lockTokensTable () {
+		$sql = "LOCK TABLES `tokens` WRITE";
+		$this->conn->exec($sql);
+	}
+
+	private function unlockTokensTable () {
+		$sql = "UNLOCK TABLES";
+		$this->conn->exec($sql);
 	}
 
 	private function getLastRefreshToken () {
