@@ -14,7 +14,7 @@ Visit this [page](https://forge.autodesk.com) for instructions to get on-board.
 
 ## Description
 
-This sample exercises the PHP7 engine to demonstrate the Forge OAuth authorisation process and most of the Forge Services API such as Data Management, Bim360, Viewer, ...
+This sample exercises the PHP7 engine to demonstrate the Forge OAuth authorisation process and most of the Forge Services API such as Data Management, BIM360, Viewer, ...
 
 Demonstrates the use of the Autodesk Forge API using a PHP7 application. Supports both 2 legged and 3 legged protocols.
 
@@ -38,20 +38,25 @@ Demonstrates the use of the Autodesk Forge API using a PHP7 application. Support
 
   4. Request your consumer client/secret keys from [https://forge.autodesk.com](https://forge.autodesk.com).
   5. **Note** for the 3 legged sample: while registering your keys, make sure that the callback you define for your callback (or redirect_uri) match your localhost and PORT number.
-  6. Provision your application key on the BIM360 application integration page. [Learn about provisioning](https://forge.autodesk.com/blog/bim-360-docs-provisioning-forge-apps).
-  7. Open rteh /server/.env file and set your data
+  6. Provision your application key on the BIM360 application integration page. [Learn about provisioning](https://forge.autodesk.com/blog/bim-360-docs-provisioning-forge-apps). This step is not required for Fusion Team.
+  7. Open the /server/.env file and set your data
   8. If using mySQL vs PHP_SESSION
 
       a. Edits /server/2legged-oauth.php at [#41 #42](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/2legged-oauth.php#L41)
 
       b. Edits /server/3legged-oauth.php at [#37 #38](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L37)
 
-      c. Create the mySQL table in your database - create statement [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L52)
+      c. Create the mySQL table in your database - create statement [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L60)
 
-      d. Edit your mySQL connection information [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L94) and [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/2legged-oauth.php#L79)
+      d. Edit your mySQL connection information [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/3legged-oauth.php#L104) and [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/server/2legged-oauth.php#L79)
 
-  9. You can choose you default model by changing the URNs - for 2 legged [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L52) and for 3 legged [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L80)
-  10. For 3 legged, specify your BIM 360 HUB and PROJECT IDs [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L90)
+  9. You can choose you default model by changing the URNs - for 2 legged [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L48) and for 3 legged [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L72)
+  10. For 3 legged, specify your BIM360 or Fusion Team HUB and PROJECT IDs [here](https://github.com/cyrillef/simple-forge-php-sample/blob/master/index.php#L97)
+
+**Note**: To find your URN, hub_id, project_id, folder_id version_id, you can use the '/api/forge/public/3hubs-tree' endpoint.
+
+1. call http://localhost/api/forge/public/3hubs-tree which will give you the list of hubs and projects. Choose the pair you want to use.
+2. call the same endpoint with hub_id and project_id parameters, like this: 'http://localhost/api/forge/public/3hubs-tree?hub_id=a.YnVzaW5lc3M6ZnJlZTM4ODc&project_id=a.YnVzaW5lc3M6ZnJlZTM4ODcjMjAyMDA3MTUzMTU4OTMyODE' - replace values with yours from step 1.
 
 **Note**: Edit the server/.env file and replace the placeholders by the values listed above.
 
@@ -59,7 +64,7 @@ Demonstrates the use of the Autodesk Forge API using a PHP7 application. Support
 
 To use the 2legged version, just got to the root of your server, for example http://localhost/
 
-To use the 3legged version, go to http://localhost/login for creating a new pair of tokens, otherwise go to http://localhost/www/bim360.html. When using the /login option, you willbe redirected to /www/bim360.html after authentication.
+To use the 3legged version, go to http://localhost/login for creating a new pair of tokens, otherwise go to http://localhost/www/view.html. When using the /login option, you willbe redirected to /www/view.html after authentication.
 
 # Further reading
 

@@ -24,10 +24,6 @@ class OSS {
 
 	public function __construct () {
 		set_time_limit(0);
-
-		// $dotenv = Dotenv::createImmutable(__DIR__);
-		// $dotenv->load();
-		// $this->bucketId = ForgeConfig::getBucket();
 		$this->bucketId = ForgeConfig::getBucket();
 	}
 

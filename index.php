@@ -25,14 +25,14 @@ include_once './server/2legged.php';
 include_once './server/2legged-oauth.php';
 include_once './server/3legged.php';
 include_once './server/3legged-oauth.php';
+include_once './server/dm.php';
 include_once './server/oss.php';
-include_once './server/bim360.php';
 
 use Klein\Klein;
 use Autodesk\ForgeServices\AccessToken2Legged;
 use Autodesk\ForgeServices\AccessToken3Legged;
 use Autodesk\ForgeServices\OSS;
-use Autodesk\ForgeServices\BIM360;
+use Autodesk\ForgeServices\DM;
 
 $klein = new Klein();
 
@@ -68,27 +68,66 @@ $klein->respond('GET', '/api/forge/public/3legged', function () {
 	return $accessToken->getAccessToken();
 });
 
-// Get 1 default urn from BIM360 which requires a 3legged token
+// Get 1 default model urn which requires a 3legged token
 $klein->respond('GET', '/api/forge/public/3urn', function () {
-	// hub_id = b.a4f95080-84fe-4281-8d0a-bd8c885695e0
-	// project_id = b.dd31c918-027a-4a29-9946-ec292facdf7a
-	// folder_id = urn:adsk.wipprod:fs.folder:co.QSOHk5y8RoKk9_bt4PYibg
-	// item_id = urn:adsk.wipprod:dm.lineage:-TV6-JSsTxmcKq0IvfN6_w
-	// version_id = urn:adsk.wipprod:fs.file:vf.-TV6-JSsTxmcKq0IvfN6_w?version=1
-	// urn => dXJuOmFkc2sud2lwcHJvZDpmcy5maWxlOnZmLi1UVjYtSlNzVHhtY0txMEl2Zk42X3c_dmVyc2lvbj0x
 	return json_encode([
+
+		// My default BIM360 model
+		// hub_id = b.a4f95080-84fe-4281-8d0a-bd8c885695e0
+		// project_id = b.dd31c918-027a-4a29-9946-ec292facdf7a
+		// folder_id = urn:adsk.wipprod:fs.folder:co.QSOHk5y8RoKk9_bt4PYibg
+		// item_id = urn:adsk.wipprod:dm.lineage:-TV6-JSsTxmcKq0IvfN6_w
+		// version_id = urn:adsk.wipprod:fs.file:vf.-TV6-JSsTxmcKq0IvfN6_w?version=1
+		// urn => dXJuOmFkc2sud2lwcHJvZDpmcy5maWxlOnZmLi1UVjYtSlNzVHhtY0txMEl2Zk42X3c_dmVyc2lvbj0x
 		'urn' => 'dXJuOmFkc2sud2lwcHJvZDpmcy5maWxlOnZmLi1UVjYtSlNzVHhtY0txMEl2Zk42X3c_dmVyc2lvbj0x'
+		
+		// My default Fusion team model
+		// hub_id = a.YnVzaW5lc3M6ZnJlZTM4ODc
+		// project_id = a.YnVzaW5lc3M6ZnJlZTM4ODcjMjAyMDA3MTUzMTU4OTMyODE
+		// folder_id = urn:adsk.wipprod:fs.folder:co.CZJD4srGS-2LBdIsvTPObA
+		// item_id = urn:adsk.wipprod:dm.lineage:BMPQ4UMpR9GSmgmTvedlIg
+		// version_id = urn:adsk.wipprod:fs.file:vf.BMPQ4UMpR9GSmgmTvedlIg?version=1
+		// urn => dXJuOmFkc2sud2lwcHJvZDpmcy5maWxlOnZmLkJNUFE0VU1wUjlHU21nbVR2ZWRsSWc_dmVyc2lvbj0x
+		//'urn' => 'dXJuOmFkc2sud2lwcHJvZDpmcy5maWxlOnZmLkJNUFE0VU1wUjlHU21nbVR2ZWRsSWc_dmVyc2lvbj0x'
+
 	]);
 });
 
-// Get a list of files from BIM360 in the same folder (this time using the private/internal 3legged token)
+// Get a list of files from a folder in a Hub/Project (this time using the private/internal 3legged token)
 $klein->respond ('GET', '/api/forge/public/3urn-list', function () {
+	$dm = new DM ();
+
+	// BIM360 example
 	// hub_id = b.a4f95080-84fe-4281-8d0a-bd8c885695e0
 	// project_id = b.dd31c918-027a-4a29-9946-ec292facdf7a
 	// folder_id = urn:adsk.wipprod:fs.folder:co.QSOHk5y8RoKk9_bt4PYibg
-	$bim360 = new BIM360 ();
-	$list = $bim360->listObjects('b.dd31c918-027a-4a29-9946-ec292facdf7a', 'urn:adsk.wipprod:fs.folder:co.QSOHk5y8RoKk9_bt4PYibg');
+	$project_id = 'b.dd31c918-027a-4a29-9946-ec292facdf7a';
+	$folder_id = 'urn:adsk.wipprod:fs.folder:co.QSOHk5y8RoKk9_bt4PYibg';
+	
+	// Fusion Team example
+	// hub_id = a.YnVzaW5lc3M6ZnJlZTM4ODc
+	// project_id = a.YnVzaW5lc3M6ZnJlZTM4ODcjMjAyMDA3MTUzMTU4OTMyODE
+	// folder_id = urn:adsk.wipprod:fs.folder:co.CZJD4srGS-2LBdIsvTPObA
+	// $project_id = 'a.YnVzaW5lc3M6ZnJlZTM4ODcjMjAyMDA3MTUzMTU4OTMyODE';
+	// $folder_id = 'urn:adsk.wipprod:fs.folder:co.CZJD4srGS-2LBdIsvTPObA';
+
+	// Use endpoint '/api/forge/public/3hubs-tree' to get your own IDs
+
+	$list = $dm->listObjects($project_id, $folder_id);
+
 	return json_encode($list);
+});
+
+// Build a HUB/Project/Folder/Item/Version tree (this time using the private/internal 3legged token)
+$klein->respond ('GET', '/api/forge/public/3hubs-tree', function ($request) {
+	// hub_id / project_id / folder_id item_id / version_id
+	$dm = new DM ();
+	if ( is_null ($request->paramsGet()['hub_id']) )
+		return json_encode($dm->hubsLs());
+	else if ( !is_null ($request->paramsGet()['hub_id']) && !is_null ($request->paramsGet()['project_id']) )
+		return json_encode($dm->projectsRoots($request->paramsGet()['hub_id'], $request->paramsGet()['project_id']));
+	else
+		return json_encode (null);
 });
 
 // Forge 3legged callback
@@ -102,7 +141,7 @@ $klein->respond('GET', '/login', function ($request, $response) {
 $klein->respond('GET', '/callback', function ($request, $response) {
 	$oauth = new AccessToken3Legged();
 	$oauth->fetchTokens($request->paramsGet()['code']);
-	return $response->redirect('/www/bim360.html');
+	return $response->redirect('/www/view.html');
 });
 
 //---------------------------- Test ----------------------------
